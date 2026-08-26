@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sibling Studios — Cinematic 3D Studio</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#070a18;color:#fff;font-family:Arial,sans-serif}.top{height:64px;background:#080a20;border-bottom:1px solid #30386d;display:flex;align-items:center;padding:0 18px;gap:18px}.logo{font-weight:900;font-size:22px}.logo b{color:#ef4444}.tag{margin-left:auto;color:#bfc7eb;font-size:12px}.layout{display:grid;grid-template-columns:300px 1fr 280px;gap:12px;padding:12px;height:calc(100vh - 64px)}.panel{background:#11163b;border:1px solid #30386d;border-radius:12px;overflow:hidden}.head{padding:12px 14px;border-bottom:1px solid #30386d;font-weight:800}.body{padding:12px}.stage{height:100%;min-height:520px;background:#02040b}.stage canvas{display:block;width:100%;height:100%}textarea,select{width:100%;background:#080d29;color:#fff;border:1px solid #384277;border-radius:8px;padding:10px}textarea{height:430px;resize:vertical;font:13px Consolas,monospace;line-height:1.45}button{border:0;border-radius:8px;background:#526ee8;color:#fff;padding:10px 12px;cursor:pointer}button:hover{filter:brightness(1.1)}.red{background:#e83d46}.dark{background:#232b5d}.green{background:#198b63}.buttons{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}.muted{color:#aeb6dc;font-size:12px}.camera.on{background:#e83d46}.timeline{margin-top:10px;background:#080d29;border:1px solid #2c3569;border-radius:8px;padding:8px;max-height:190px;overflow:auto}.shot{padding:7px 8px;border-bottom:1px solid #202858;font-size:11px}.shot:last-child{border-bottom:0}.status{color:#9fe3c7;font-size:12px;min-height:18px}.small{font-size:11px;color:#9ea7cf}.divider{height:1px;background:#30386d;margin:12px 0}@media(max-width:1100px){.layout{grid-template-columns:1fr;height:auto}.stage{height:65vh}.tag{display:none}}
+</style>
+</head>
+<body>
+<header class="top"><div class="logo">SIBLING <b>STUDIOS</b></div><div class="tag">MSA CINEMATIC 3D • TRADITIONAL RULE-BASED ANIMATION • NO AI</div></header>
+<main class="layout">
+<section class="panel"><div class="head">Script → Scene</div><div class="body">
+<textarea id="script">SCENE: EDISON SCHOOL - HALLWAY
+
+HOLDEN: WALK
+JAX: RUN
+PETER: IDLE
+ELISE: TALK
+ELLA: WAVE
+
+CAMERA 1: WIDE
+CAMERA 2: CLOSE HOLDEN
+CAMERA 3: OVER JAX
+
+CAMERA CUT: 1
+HOLDEN: TALK
+CAMERA CUT: 2
+JAX: ACTION
+CAMERA CUT: 3
+ELLA: WAVE
+
+MUSIC: ADVENTURE
+TRANSFORMATION: HOLDEN</textarea>
+<div class="buttons"><button class="red" id="apply">Apply Script</button><button class="dark" id="play">▶ Play</button><button class="dark" id="stop">■ Stop</button></div><p id="status" class="status">Ready.</p>
+<div class="divider"></div><div class="small">The script controls acting and camera cuts. This page uses original procedural MSA-style characters and assets, not DC/Miraculous assets.</div>
+</div></section>
+<section class="panel"><div class="head">Cinematic 3D Viewport</div><div id="stage" class="stage"></div><div class="body"><div class="buttons"><button class="camera on" data-camera="1">Camera 1</button><button class="camera dark" data-camera="2">Camera 2</button><button class="camera dark" data-camera="3">Camera 3</button><button class="dark" id="wide">Wide</button><button class="dark" id="close">Close-Up</button><button class="dark" id="over">Over Shoulder</button><button class="dark" id="dolly">Dolly</button></div><p class="muted">Drag to orbit • wheel to zoom • use the camera buttons for cinematic shots.</p><div id="timeline" class="timeline"></div></div></section>
+<section class="panel"><div class="head">Acting Controls</div><div class="body"><select id="who"><option>Holden</option><option>Jax</option><option>Peter</option><option>Elise</option><option>Ella</option></select><select id="anim" style="margin-top:8px"><option>Idle</option><option>Walk</option><option>Run</option><option>Talk</option><option>Wave</option><option>Jump</option><option>Action</option></select><button id="applyAnim" class="red" style="margin-top:8px;width:100%">Apply Acting</button><div class="divider"></div><p class="muted">Character target:</p><ul class="small"><li>Rounded head and body</li><li>Separate arms, hands, legs and shoes</li><li>Expressive eye direction</li><li>Layered motion and camera staging</li></ul><div class="divider"></div><p class="muted">Next asset stage:</p><p class="small">Import your final MSA character models and rigs here. The procedural figures are placeholders for the real custom models.</p></div></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const data={Holden:[0x70462f,0x151515,0x3157c9],Jax:[0x7d4e37,0x111111,0x4067e7],Peter:[0x8b5a3c,0x171313,0x687be8],Elise:[0x6f442f,0x241513,0xd94f94],Ella:[0x805037,0x171313,0xd9a41d]};
+let scene,renderer,clock,cameras={},activeCam=1,rigs={},playing=false,raf=0,drag=false,lastX=0,lastY=0,yaw=.15,pitch=.10,dist=15,target=new THREE.Vector3(0,2.2,-5),motion={};
+const mat=c=>new THREE.MeshStandardMaterial({color:c,roughness:.6,metalness:.02});
+function capsule(r,l,m){return new THREE.Mesh(new THREE.CapsuleGeometry(r,l,8,16),m)}
+function sphere(r,m){return new THREE.Mesh(new THREE.SphereGeometry(r,24,16),m)}
+function makeCharacter(name,index){
+ const [skinC,hairC,shirtC]=data[name],g=new THREE.Group();g.name=name;g.position.set((index-2)*2.65,0,-5);g.userData.baseX=g.position.x;
+ const skin=mat(skinC),hair=mat(hairC),shirt=mat(shirtC),pants=mat(0x242938),shoe=mat(0x10131b),white=mat(0xf4f6fa),black=mat(0x10131b);
+ const body=capsule(.58,1.5,shirt);body.position.y=2.05;body.scale.set(.94,1,.80);body.castShadow=true;g.add(body);g.userData.body=body;
+ const head=sphere(.67,skin);head.position.y=3.72;head.scale.set(1.03,1.04,.94);head.castShadow=true;g.add(head);g.userData.head=head;
+ const haircap=new THREE.Mesh(new THREE.SphereGeometry(.69,24,16,0,Math.PI*2,0,Math.PI*.56),hair);haircap.position.y=4.06;haircap.scale.set(1.04,.78,.98);haircap.castShadow=true;g.add(haircap);
+ const fringe=new THREE.Mesh(new THREE.BoxGeometry(1.08,.12,.30),hair);fringe.position.set(0,3.87,.50);g.add(fringe);
+ const eyes=[];for(const x of[-.22,.22]){const e=sphere(.115,white);e.position.set(x,3.78,.62);const p=sphere(.052,black);p.position.set(0,0,.09);e.add(p);g.add(e);eyes.push(e)}g.userData.eyes=eyes;
+ const mouth=new THREE.Mesh(new THREE.BoxGeometry(.22,.045,.025),black);mouth.position.set(0,3.47,.64);g.add(mouth);g.userData.mouth=mouth;
+ function joint(x,y,z,r,len,m){const j=new THREE.Group();j.position.set(x,y,z);const s=capsule(r,len,m);s.position.y=-len/2;s.castShadow=true;j.add(s);g.add(j);return j}
+ const la=joint(-.72,2.68,0,.16,1.05,shirt),ra=joint(.72,2.68,0,.16,1.05,shirt);const lh=sphere(.19,skin),rh=sphere(.19,skin);lh.position.set(-.72,1.58,0);rh.position.set(.72,1.58,0);g.add(lh,rh);
+ const ll=joint(-.25,1.12,0,.19,1.0,pants),rl=joint(.25,1.12,0,.19,1.0,pants);const ls=capsule(.22,.52,shoe),rs=capsule(.22,.52,shoe);ls.position.set(-.25,.27,.06);rs.position.set(.25,.27,.06);g.add(ls,rs);
+ g.userData.parts={la,ra,ll,rl,lh,rh,ls,rs};g.userData.state='Idle';return g;
+}
+function init(){
+ scene=new THREE.Scene();scene.background=new THREE.Color(0x071326);scene.fog=new THREE.Fog(0x071326,14,34);clock=new THREE.Clock();
+ renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize($('stage').clientWidth,$('stage').clientHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;$('stage').appendChild(renderer.domElement);
+ const hemi=new THREE.HemisphereLight(0x9bb8ff,0x241b18,1.35);scene.add(hemi);const key=new THREE.DirectionalLight(0xffffff,2.4);key.position.set(5,10,7);key.castShadow=true;key.shadow.mapSize.set(2048,2048);scene.add(key);const rim=new THREE.DirectionalLight(0x5577ff,1.5);rim.position.set(-8,5,-8);scene.add(rim);
+ const floor=new THREE.Mesh(new THREE.PlaneGeometry(60,60),mat(0x4b4140));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+ const back=new THREE.Mesh(new THREE.BoxGeometry(30,10,.35),mat(0x182c4a));back.position.set(0,5,-10);back.receiveShadow=true;scene.add(back);
+ const trim=new THREE.Mesh(new THREE.BoxGeometry(30,5,.18),mat(0x263c5e));trim.position.set(0,2.5,-9.75);scene.add(trim);
+ ['Holden','Jax','Peter','Elise','Ella'].forEach((n,i)=>{const r=makeCharacter(n,i);scene.add(r);rigs[n]=r;motion[n]=0});
+ cameras[1]=new THREE.PerspectiveCamera(42,$('stage').clientWidth/$('stage').clientHeight,.1,100);cameras[2]=new THREE.PerspectiveCamera(38,$('stage').clientWidth/$('stage').clientHeight,.1,100);cameras[3]=new THREE.PerspectiveCamera(40,$('stage').clientWidth/$('stage').clientHeight,.1,100);setPreset('wide');render();}
+function placeCamera(c,mode){if(mode==='wide'){c.position.set(0,5.0,9);target.set(0,2.3,-5)}else if(mode==='close'){c.position.set(2.8,4.1,1.8);target.set(0.4,3.1,-5)}else if(mode==='over'){c.position.set(3.8,3.5,-1.2);target.set(1.5,2.7,-5)}else{c.position.set(0,3.3,3.5);target.set(0,2.7,-5)}}
+function setPreset(mode){placeCamera(cameras[activeCam],mode);cameras[activeCam].lookAt(target)}
+function updateOrbit(){const c=cameras[activeCam];const x=target.x+Math.sin(yaw)*Math.cos(pitch)*dist;const y=target.y+Math.sin(pitch)*dist;const z=target.z+Math.cos(yaw)*Math.cos(pitch)*dist;c.position.set(x,y,z);c.lookAt(target)}
+function animateRig(r,t){const s=r.userData.state,p=r.userData.parts;const bob=Math.sin(t*6)*.035; r.position.y=bob;r.rotation.y=Math.sin(t*2)*.025;
+ [p.la,p.ra,p.ll,p.rl].forEach(j=>j.rotation.set(0,0,0));p.lh.rotation.set(0,0,0);p.rh.rotation.set(0,0,0);r.userData.head.rotation.set(0,0,0);r.userData.mouth.scale.x=1;
+ if(s==='Walk'){const q=Math.sin(t*7);p.ll.rotation.x=q*.65;p.rl.rotation.x=-q*.65;p.la.rotation.x=-q*.45;p.ra.rotation.x=q*.45;r.position.x=r.userData.baseX+Math.sin(t*.9)*.45}
+ if(s==='Run'){const q=Math.sin(t*10);p.ll.rotation.x=q*1.0;p.rl.rotation.x=-q*1.0;p.la.rotation.x=-q*.9;p.ra.rotation.x=q*.9;r.position.x=r.userData.baseX+Math.sin(t*1.7)*.75;r.position.y=Math.abs(Math.sin(t*10))*.08}
+ if(s==='Talk'){r.userData.mouth.scale.x=.65+Math.abs(Math.sin(t*9))*.7;r.userData.head.rotation.y=Math.sin(t*2.4)*.12}
+ if(s==='Wave'){p.ra.rotation.z=-.8;p.ra.rotation.x=-.5;p.rh.rotation.z=Math.sin(t*9)*.35}
+ if(s==='Jump'){r.position.y=Math.abs(Math.sin(t*3))*1.0;p.la.rotation.x=-.5;p.ra.rotation.x=.5}
+ if(s==='Action'){p.la.rotation.z=.9;p.ra.rotation.z=-.9;p.ll.rotation.x=-.45;p.rl.rotation.x=.45;r.rotation.y=Math.sin(t*5)*.15}
+ if(s==='Idle'){r.userData.head.rotation.y=Math.sin(t*1.2)*.035}
+}
+function render(){raf=requestAnimationFrame(render);const t=clock.getElapsedTime();Object.values(rigs).forEach(r=>animateRig(r,t));if(playing){const phase=Math.floor(t/2.2)%3;activeCam=phase+1;document.querySelectorAll('.camera').forEach(b=>b.classList.toggle('on',+b.dataset.camera===activeCam));}if(!drag)updateOrbit();renderer.render(scene,cameras[activeCam])}
+function parse(){const text=$('script').value;const lines=text.split(/\n/).map(x=>x.trim()).filter(Boolean);const shots=[];lines.forEach(line=>{const m=line.match(/^(HOLDEN|JAX|PETER|ELISE|ELLA)\s*:\s*(WALK|RUN|IDLE|TALK|WAVE|JUMP|ACTION)/i);if(m)shots.push(m[1]+' → '+m[2]);const c=line.match(/^CAMERA\s+(1|2|3)\s*:\s*(.+)$/i);if(c)shots.push('Camera '+c[1]+' → '+c[2]);const cut=line.match(/^CAMERA CUT:\s*(1|2|3)/i);if(cut)shots.push('CUT → Camera '+cut[1]);});shots.forEach(x=>{const [n,a]=x.split(' → ');const r=rigs[n];if(r&&a)r.userData.state=a});$('timeline').innerHTML=shots.map((s,i)=>'<div class="shot"><b>'+(i+1)+'</b> '+s+'</div>').join('');$('status').textContent='Script applied: '+shots.length+' scene instructions.'}
+$('apply').onclick=parse;$('play').onclick=()=>{playing=true;clock.start();$('status').textContent='Playing cinematic camera sequence.'};$('stop').onclick=()=>{playing=false;$('status').textContent='Stopped.'};
+document.querySelectorAll('.camera').forEach(b=>b.onclick=()=>{activeCam=+b.dataset.camera;playing=false;document.querySelectorAll('.camera').forEach(x=>x.classList.toggle('on',x===b));setPreset(activeCam===1?'wide':activeCam===2?'close':'over')});
+$('wide').onclick=()=>setPreset('wide');$('close').onclick=()=>setPreset('close');$('over').onclick=()=>setPreset('over');$('dolly').onclick=()=>{setPreset('dolly');let c=cameras[activeCam];const start=c.position.clone();const end=start.clone().lerp(target,.25);let q=0;function d(){q+=.025;c.position.lerpVectors(start,end,Math.min(q,1));c.lookAt(target);if(q<1)requestAnimationFrame(d)}d()};
+$('applyAnim').onclick=()=>{const n=$('who').value,a=$('anim').value;rigs[n].userData.state=a;$('status').textContent=n+' acting: '+a};
+$('stage').addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX;lastY=e.clientY});window.addEventListener('pointerup',()=>drag=false);window.addEventListener('pointermove',e=>{if(!drag)return;yaw-=(e.clientX-lastX)*.006;pitch+=(e.clientY-lastY)*.004;pitch=Math.max(-.45,Math.min(.55,pitch));lastX=e.clientX;lastY=e.clientY});$('stage').addEventListener('wheel',e=>{dist=Math.max(7,Math.min(25,dist+e.deltaY*.01));e.preventDefault()},{passive:false});
+window.addEventListener('resize',()=>{const w=$('stage').clientWidth,h=$('stage').clientHeight;renderer.setSize(w,h);Object.values(cameras).forEach(c=>{c.aspect=w/h;c.updateProjectionMatrix()})});
+init();parse();
+})();
+</script>
+</body>
+</html>
