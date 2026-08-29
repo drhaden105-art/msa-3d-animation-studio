@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -25,30 +25,42 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Fix episode card layout
+      - name: Fix episode card layout in source
         shell: python
         run: |
           from pathlib import Path
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
-          old = '.assets,.mediaGrid,.episodegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}.asset,.mediaCard,.episode{background:#090d29;border:1px solid #343c72;border-radius:9px;overflow:hidden;padding:10px;cursor:pointer}.mediaThumb,.thumb{height:145px;background:linear-gradient(135deg,#1b2855,#070a19);display:flex;align-items:center;justify-content:center;font-size:44px}'
-          new = '.assets,.mediaGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}.episodegrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:22px;align-items:start;width:100%;min-width:0}.asset,.mediaCard,.episode{background:#090d29;border:1px solid #343c72;border-radius:9px;overflow:hidden;padding:10px;cursor:pointer}.episode{min-width:0;width:100%;display:flex;flex-direction:column}.episode .thumb{width:100%;height:auto;aspect-ratio:16/9;min-height:0;background:linear-gradient(135deg,#1b2855,#070a19);display:flex;align-items:center;justify-content:center;font-size:44px;overflow:hidden}.mediaThumb{height:145px;background:linear-gradient(135deg,#1b2855,#070a19);display:flex;align-items:center;justify-content:center;font-size:44px}'
-          if old not in s:
-              raise SystemExit('Expected episode layout CSS was not found')
-          s = s.replace(old, new)
+          old = '.assets,.mediaGrid,.episodegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}'
+          new = '.assets,.mediaGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}.episodegrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:22px;align-items:start;width:100%;min-width:0}'
+          if old in s:
+              s = s.replace(old, new, 1)
           extra = '''<style id="episode-card-responsive-fix">
-          .episodegrid{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)) !important;gap:22px !important;width:100% !important}
-          .episode{width:100% !important;min-width:0 !important;padding:0 !important}
-          .episode .thumb{width:100% !important;aspect-ratio:16/9 !important;height:auto !important;min-height:0 !important}
+          .episodegrid{display:grid !important;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)) !important;gap:22px !important;width:100% !important;align-items:start !important}
+          .episode{width:100% !important;min-width:0 !important;padding:0 !important;overflow:hidden !important}
+          .episode .thumb{display:flex !important;width:100% !important;aspect-ratio:16/9 !important;height:auto !important;min-height:0 !important;overflow:hidden !important}
           .episode .info{padding:14px !important}
-          @media(max-width:700px){.episodegrid{grid-template-columns:1fr !important}.episode .thumb{aspect-ratio:16/9 !important}}
+          @media(max-width:700px){.episodegrid{grid-template-columns:1fr !important}.episode{width:100% !important}}
           </style>'''
           if 'id="episode-card-responsive-fix"' not in s:
-              s = s.replace('</head>', extra + '\n</head>')
+              s = s.replace('</head>', extra + '\n</head>', 1)
           p.write_text(s, encoding='utf-8')
+
+      - name: Commit source fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "No source change needed"
+          else
+            git commit -m "Fix episode card layout [skip ci]"
+            git push
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v4
