@@ -1,0 +1,49 @@
+name: Deploy Sibling Studios
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Integrate Animation References into Studio
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          marker = '<div class="panel"><h3>Animation Direction</h3>'
+          if 'id="animationReferences"' not in s and marker in s:
+              panel = '''<div class="panel" id="animationReferences"><h3>Animation Style References</h3><div class="body"><p class="muted">Add 1, 2, or 3 links showing how you want the animation to move and feel. These are style references only.</p><div style="display:grid;gap:8px"><input id="animRef1" placeholder="Reference Link 1" type="url" style="width:100%;background:#090d29;color:#fff;border:1px solid #343c72;border-radius:8px;padding:10px"><input id="animRef2" placeholder="Reference Link 2 (optional)" type="url" style="width:100%;background:#090d29;color:#fff;border:1px solid #343c72;border-radius:8px;padding:10px"><input id="animRef3" placeholder="Reference Link 3 (optional)" type="url" style="width:100%;background:#090d29;color:#fff;border:1px solid #343c72;border-radius:8px;padding:10px"></div><div class="buttons"><button class="green" id="saveAnimRefs">Save References</button><button class="dark" id="clearAnimRefs">Clear</button></div><p id="animRefStatus" class="status">No references saved.</p></div></div>'''
+              s = s.replace(marker, panel + marker, 1)
+          if 'id="saveAnimRefs"' in s and 'const animRefKey=' not in s:
+              js = '''<script id="animation-reference-controls">(function(){const k='msaAnimationReferences';const ids=['animRef1','animRef2','animRef3'];function load(){try{const a=JSON.parse(localStorage.getItem(k)||'[]');ids.forEach((id,i)=>{const e=document.getElementById(id);if(e)e.value=a[i]||''});if(a.some(Boolean)){const st=document.getElementById('animRefStatus');if(st)st.textContent=a.filter(Boolean).length+' reference(s) saved.'}}catch(e){}}function save(){const a=ids.map(id=>(document.getElementById(id)||{}).value||'').map(v=>v.trim()).filter(Boolean).slice(0,3);localStorage.setItem(k,JSON.stringify(a));const st=document.getElementById('animRefStatus');if(st)st.textContent=a.length+' reference(s) saved for this project.'}function clearRefs(){localStorage.removeItem(k);ids.forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});const st=document.getElementById('animRefStatus');if(st)st.textContent='References cleared.'}document.addEventListener('DOMContentLoaded',()=>{load();document.getElementById('saveAnimRefs')?.addEventListener('click',save);document.getElementById('clearAnimRefs')?.addEventListener('click',clearRefs)})})();</script>'''
+              s = s.replace('</body>', js + '</body>', 1)
+          p.write_text(s, encoding='utf-8')
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
