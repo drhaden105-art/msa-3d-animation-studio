@@ -110,4 +110,5 @@ document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>page(b.dataset
 $('assets').innerHTML=Object.keys(D).map(n=>'<div class="asset" data-n="'+n+'"><b>'+n+'</b><div class="muted">Rounded 3D character</div></div>').join('');$('who').innerHTML=Object.keys(D).map(n=>'<option>'+n+'</option>').join('');document.querySelectorAll('.asset').forEach(a=>a.onclick=()=>{$('who').value=a.dataset.n;$('info').textContent=a.dataset.n+' • MSA character'});$('info').textContent='Holden • Lion Miraculous';const saved=localStorage.getItem('msaScript');if(saved)$('script').value=saved;init();timeline();renderEpisodes();
 window.tone=t=>{audio&&audio.close();audio=new(window.AudioContext||window.webkitAudioContext)();const f=t==='adventure'?[261.6,329.6,392,523.3]:t==='emotional'?[220,261.6,329.6,293.7]:[196,233,294,247];f.forEach((hz,i)=>{const o=audio.createOscillator(),g=audio.createGain();o.frequency.value=hz;o.type='sine';g.gain.value=.04;o.connect(g).connect(audio.destination);o.start(audio.currentTime+i*.25);o.stop(audio.currentTime+2.2)});$('status').textContent='Playing '+t+' score preview.'};
 })();
-</script></body></html>
+</script><script src="animation-references.js"></script>
+</body></html>
