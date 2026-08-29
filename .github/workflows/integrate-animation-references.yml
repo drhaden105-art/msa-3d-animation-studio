@@ -1,0 +1,48 @@
+name: Integrate Animation References
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Add reference panel to main studio
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+          tag = '<script src="animation-references.js"></script>'
+          if tag not in text:
+              marker = '</body>'
+              if marker not in text:
+                  raise SystemExit('Could not find </body> in index.html')
+              text = text.replace(marker, tag + '\n' + marker, 1)
+              p.write_text(text, encoding='utf-8')
+              print('Animation reference script integrated.')
+          else:
+              print('Animation reference script already integrated.')
+          PY
+
+      - name: Commit integration
+        shell: bash
+        run: |
+          if git diff --quiet -- index.html; then
+            echo 'No source change needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Integrate animation references into main studio'
+          git push
