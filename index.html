@@ -43,26 +43,54 @@
 const $=id=>document.getElementById(id);
 const D={Holden:[0x70462f,0x151515,0x3157c9],Jax:[0x7d4e37,0x111111,0x4067e7],Peter:[0x8b5a3c,0x171313,0x687be8],Elise:[0x6f442f,0x241513,0xd94f94],Ella:[0x805037,0x171313,0xd9a41d]};
 let scene,renderer,cams={},active=1,rigs={},playing=false,drag=false,lx=0,ly=0,yaw=.12,pitch=.08,dist=14,target=new THREE.Vector3(0,2.5,-5),audio,timelineEvents=[],timelineDuration=0,currentTime=0,playbackStart=0,activeCameraEvent=-1,exporting=false;
-const toonRamp=new THREE.DataTexture(new Uint8Array([24,26,38,255,78,86,115,255,158,169,195,255,244,246,255,255]),4,1,THREE.RGBAFormat);toonRamp.magFilter=THREE.NearestFilter;toonRamp.minFilter=THREE.NearestFilter;toonRamp.generateMipmaps=false;toonRamp.needsUpdate=true;
+const toonRamp=new THREE.DataTexture(new Uint8Array([86,88,102,255,116,120,136,255,151,157,174,255,190,196,211,255,225,230,241,255,255,255,255,255]),6,1,THREE.RGBAFormat);toonRamp.magFilter=THREE.NearestFilter;toonRamp.minFilter=THREE.NearestFilter;toonRamp.generateMipmaps=false;toonRamp.needsUpdate=true;
 const M=c=>new THREE.MeshToonMaterial({color:c,gradientMap:toonRamp});
 const CAP=(r,l,m)=>new THREE.Mesh(new THREE.CapsuleGeometry(r,l,10,18),m);
 const SPH=(r,m)=>new THREE.Mesh(new THREE.SphereGeometry(r,28,20),m);
 function limb(parent,x,y,z,r,len,material){const j=new THREE.Group();j.position.set(x,y,z);const s=CAP(r,len,material);s.position.y=-len*.5;s.castShadow=true;j.add(s);parent.add(j);return j}
+function addOutline(mesh,factor=1.035){
+ const outline=new THREE.Mesh(mesh.geometry,new THREE.MeshBasicMaterial({color:0x171722,side:THREE.BackSide,depthWrite:false,toneMapped:false}));
+ outline.scale.setScalar(factor);outline.renderOrder=2;mesh.add(outline);return mesh
+}
+function makeArm(parent,x,shirt,skin){
+ const group=new THREE.Group();group.position.set(x,2.72,.02);
+ const sleeve=new THREE.Mesh(new THREE.CapsuleGeometry(.145,.34,8,16),shirt);sleeve.position.y=-.23;sleeve.castShadow=true;group.add(sleeve);addOutline(sleeve,1.04);
+ const forearm=new THREE.Mesh(new THREE.CapsuleGeometry(.105,.31,8,16),skin);forearm.position.y=-.61;forearm.castShadow=true;group.add(forearm);addOutline(forearm,1.035);
+ const hand=SPH(.13,skin);hand.scale.set(.9,1.05,.88);hand.position.set(0,-.94,.02);group.add(hand);
+ parent.add(group);return{group,hand}
+}
 function makeRig(name,i){
  const [skinC,hairC,shirtC]=D[name],g=new THREE.Group();g.name=name;g.userData.baseX=(i-2)*2.55;g.position.set(g.userData.baseX,0,-5);
- const skin=M(skinC),hair=M(hairC),shirt=M(shirtC),pants=M(0x222735),shoe=M(0x11141c);
- const body=CAP(.58,1.45,shirt);body.scale.set(.92,1,.78);body.position.y=2.15;body.castShadow=true;g.add(body);
- const head=SPH(.66,skin);head.position.y=3.78;head.scale.set(1.02,1.04,.94);head.castShadow=true;g.add(head);
- const hairCap=new THREE.Mesh(new THREE.SphereGeometry(.68,32,18,0,Math.PI*2,0,Math.PI*.55),hair);hairCap.scale.set(1.03,.75,.98);hairCap.position.y=4.13;hairCap.castShadow=true;g.add(hairCap);
- const fringe=new THREE.Mesh(new THREE.BoxGeometry(1.05,.12,.30),hair);fringe.position.set(0,3.91,.49);g.add(fringe);
- const eyeWhite=M(0xf5f7fa),pupilMat=M(0x11151c);
- for(const x of[-.22,.22]){const e=SPH(.105,eyeWhite);e.position.set(x,3.82,.58);e.scale.set(.95,1,.55);g.add(e);const p=SPH(.052,pupilMat);p.position.set(x,3.82,.64);g.add(p)}
- const mouth=CAP(.035,.12,M(0x341a20));mouth.scale.set(1.9,.34,.35);mouth.position.set(0,3.52,.61);g.add(mouth);
- const armL=limb(g,-.68,2.55,0,.16,.86,shirt),armR=limb(g,.68,2.55,0,.16,.86,shirt);
- const handL=SPH(.18,skin),handR=SPH(.18,skin);handL.position.set(-.68,1.60,0);handR.position.set(.68,1.60,0);g.add(handL,handR);
- const legL=limb(g,-.25,.95,0,.18,.62,pants),legR=limb(g,.25,.95,0,.18,.62,pants);
- const footL=CAP(.20,.40,shoe),footR=CAP(.20,.40,shoe);footL.position.set(-.25,.15,.08);footR.position.set(.25,.15,.08);g.add(footL,footR);
- g.userData={baseX:g.userData.baseX,armL,armR,legL,legR,handL,handR,mouth,head,body,phase:i*.7,mode:'Idle'};scene.add(g);rigs[name]=g;
+ const skin=M(skinC),hair=M(hairC),shirt=M(shirtC),pants=M(0x222735),shoe=M(0x11141c),accent=M(0xf2c84b);
+ const torsoProfile=[new THREE.Vector2(0,-.76),new THREE.Vector2(.28,-.74),new THREE.Vector2(.36,-.56),new THREE.Vector2(.40,-.20),new THREE.Vector2(.49,.34),new THREE.Vector2(.47,.59),new THREE.Vector2(.34,.76),new THREE.Vector2(0,.76)];
+ const body=new THREE.Mesh(new THREE.LatheGeometry(torsoProfile,32),shirt);body.position.y=2.18;body.castShadow=true;g.add(body);addOutline(body,1.025);
+ const neck=CAP(.17,.22,skin);neck.position.set(0,3.02,0);g.add(neck);
+ const faceProfile=[new THREE.Vector2(0,-.64),new THREE.Vector2(.29,-.62),new THREE.Vector2(.45,-.43),new THREE.Vector2(.51,-.12),new THREE.Vector2(.52,.18),new THREE.Vector2(.43,.47),new THREE.Vector2(.29,.62),new THREE.Vector2(0,.64)];
+ const head=new THREE.Mesh(new THREE.LatheGeometry(faceProfile,40),skin);head.position.y=3.78;head.castShadow=true;g.add(head);addOutline(head,1.025);
+ const hairCap=new THREE.Mesh(new THREE.SphereGeometry(.57,36,24,0,Math.PI*2,0,Math.PI*.57),hair);hairCap.scale.set(1.03,.78,.95);hairCap.position.set(0,4.18,-.015);hairCap.castShadow=true;g.add(hairCap);addOutline(hairCap,1.025);
+ const lockL=SPH(.16,hair);lockL.scale.set(.78,1.35,.8);lockL.position.set(-.43,3.94,.02);g.add(lockL);
+ const lockR=SPH(.16,hair);lockR.scale.set(.78,1.35,.8);lockR.position.set(.43,3.94,.02);g.add(lockR);
+ const fringeShape=new THREE.Shape();fringeShape.moveTo(-.50,.01);fringeShape.lineTo(-.36,.12);fringeShape.lineTo(-.18,-.015);fringeShape.lineTo(-.01,.10);fringeShape.lineTo(.16,-.02);fringeShape.lineTo(.34,.11);fringeShape.lineTo(.51,.025);fringeShape.lineTo(.51,-.09);fringeShape.lineTo(-.50,-.09);fringeShape.closePath();
+ const fringe=new THREE.Mesh(new THREE.ShapeGeometry(fringeShape),hair);fringe.position.set(0,4.045,.48);g.add(fringe);
+ for(const x of[-.20,.20]){
+  const eyeSocket=SPH(.105,M(0x35251f));eyeSocket.scale.set(1.05,.76,.38);eyeSocket.position.set(x,3.86,.47);g.add(eyeSocket);
+  const eye=SPH(.077,M(0xf3f3ed));eye.scale.set(.92,.70,.35);eye.position.set(x,3.86,.505);g.add(eye);
+  const iris=SPH(.040,M(0x466fc6));iris.scale.set(.9,1,.5);iris.position.set(x+.006,3.858,.535);g.add(iris);
+  const pupil=SPH(.022,M(0x10131a));pupil.position.set(x+.008,3.858,.552);g.add(pupil);
+  const brow=new THREE.Mesh(new THREE.BoxGeometry(.18,.034,.026),hair);brow.position.set(x,3.99,.50);brow.rotation.z=x<0?.10:-.10;g.add(brow);
+ }
+ const earL=SPH(.10,skin);earL.scale.set(.52,1.1,.68);earL.position.set(-.50,3.73,.01);g.add(earL);
+ const earR=SPH(.10,skin);earR.scale.set(.52,1.1,.68);earR.position.set(.50,3.73,.01);g.add(earR);
+ const nose=SPH(.055,skin);nose.scale.set(.72,1.25,.85);nose.position.set(0,3.66,.53);g.add(nose);
+ const mouth=CAP(.022,.075,M(0x351d24));mouth.scale.set(1.35,.38,.38);mouth.position.set(0,3.43,.515);g.add(mouth);
+ const armLeft=makeArm(g,-.48,shirt,skin),armRight=makeArm(g,.48,shirt,skin);
+ const legL=limb(g,-.22,1.14,0,.155,.66,pants),legR=limb(g,.22,1.14,0,.155,.66,pants);
+ const footL=CAP(.18,.34,shoe),footR=CAP(.18,.34,shoe);footL.rotation.z=footR.rotation.z=Math.PI/2;footL.position.set(-.24,.17,.12);footR.position.set(.24,.17,.12);g.add(footL,footR);
+ const belt=new THREE.Mesh(new THREE.TorusGeometry(.31,.035,8,32),M(0x171a25));belt.rotation.x=Math.PI/2;belt.position.set(0,1.75,0);g.add(belt);
+ const crestShape=new THREE.Shape();crestShape.moveTo(0,.15);crestShape.lineTo(.12,.07);crestShape.lineTo(.09,-.07);crestShape.lineTo(0,-.16);crestShape.lineTo(-.09,-.07);crestShape.lineTo(-.12,.07);crestShape.closePath();
+ const crest=new THREE.Mesh(new THREE.ShapeGeometry(crestShape),accent);crest.position.set(0,2.46,.475);g.add(crest);
+ g.userData={baseX:g.userData.baseX,armL:armLeft.group,armR:armRight.group,legL,legR,handL:armLeft.hand,handR:armRight.hand,mouth,head,body,phase:i*.7,mode:'Idle'};
+ scene.add(g);rigs[name]=g
 }
 function init(){
  const el=$('stage');scene=new THREE.Scene();scene.background=new THREE.Color(0x111b30);scene.fog=new THREE.Fog(0x111b30,15,34);
@@ -86,14 +114,14 @@ function resize(){if(!renderer)return;const w=$('stage').clientWidth,h=$('stage'
 function applyPose(r,mode,t){
  const u=r.userData,q=t*.004+u.phase;
  u.armL.rotation.z=u.armR.rotation.z=u.legL.rotation.z=u.legR.rotation.z=0;
- u.handL.position.y=u.handR.position.y=1.60;u.mouth.scale.y=.34;
+ u.handL.position.y=u.handR.position.y=-.94;u.mouth.scale.y=.38;
  r.position.x=u.baseX;r.position.y=0;r.rotation.y=0;
- if(mode==='Walk'||mode==='Run'){const s=mode==='Run'?1.7:1;const swing=Math.sin(q*5)*.58*s;u.armL.rotation.z=-swing;u.armR.rotation.z=swing;u.legL.rotation.z=swing;u.legR.rotation.z=-swing;r.position.x=u.baseX+Math.sin(q*2)*.22*s}
- if(mode==='Wave'){u.armR.rotation.z=-1.15+Math.sin(q*6)*.18;u.handR.position.y=1.85+Math.sin(q*6)*.16}
- if(mode==='Jump'){r.position.y=Math.max(0,Math.sin(q*2))*1.1}
- if(mode==='Action'){u.armL.rotation.z=-.95;u.armR.rotation.z=.95;r.position.y=.22}
- if(mode==='Talk'){u.mouth.scale.y=.5+.35*(.5+.5*Math.sin(q*8))}
- if(mode==='Idle'){u.armL.rotation.z=Math.sin(q*2)*.04;u.armR.rotation.z=-Math.sin(q*2)*.04}
+ if(mode==='Walk'||mode==='Run'){const s=mode==='Run'?1.55:1;const swing=Math.sin(q*4.5)*.48*s;u.armL.rotation.z=-swing;u.armR.rotation.z=swing;u.legL.rotation.z=swing*.8;u.legR.rotation.z=-swing*.8;r.position.x=u.baseX+Math.sin(q*2)*.18*s}
+ if(mode==='Wave'){u.armR.rotation.z=-1.05+Math.sin(q*6)*.14;u.handR.position.y=-.86+Math.sin(q*6)*.08}
+ if(mode==='Jump'){r.position.y=Math.max(0,Math.sin(q*2))*1.0}
+ if(mode==='Action'){u.armL.rotation.z=-.85;u.armR.rotation.z=.85;r.position.y=.18}
+ if(mode==='Talk'){u.mouth.scale.y=.45+.24*(.5+.5*Math.sin(q*8))}
+ if(mode==='Idle'){u.armL.rotation.z=Math.sin(q*2)*.035;u.armR.rotation.z=-Math.sin(q*2)*.035}
 }
 function loop(t=0){
  requestAnimationFrame(loop);
