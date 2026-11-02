@@ -112,7 +112,7 @@ function parse(){
   const start=Number(match[1]||0),name=match[2].trim().toUpperCase(),value=match[3].trim(),duration=Number(match[4]||2.5),upper=value.toUpperCase();
   const cam=name.match(/^CAMERA\s+([1-3])$/);
   if(cam){const camera=Number(cam[1]);const presetName=upper.includes('WIDE')?'wide':upper.includes('CLOSE')?'close':upper.includes('OVER')?'over':upper.includes('DOLLY')?'dolly':null;if(!presetName){ignored.push(text);return}ev.push({kind:'camera',name:'CAMERA '+camera,value,start,duration:0,camera,preset:presetName,order:index});return}
-  if(!Object.prototype.hasOwnProperty.call(D,name)){ignored.push(text);return}
+  const characterName=Object.keys(D).find(key=>key.toUpperCase()===name);if(!characterName){ignored.push(text);return}
   const mode=modeFor(value);if(!mode){ignored.push(text);return}
   ev.push({kind:'action',name,value,mode,start,duration:Math.max(.1,duration),order:index})
  });
@@ -126,7 +126,7 @@ function parse(){
 function applyTimelineAt(seconds){
  currentTime=Math.max(0,Math.min(timelineDuration,seconds));
  Object.keys(rigs).forEach(name=>{
-  const activeEvent=timelineEvents.filter(e=>e.kind==='action'&&e.name===name&&e.start<=currentTime&&currentTime<e.start+e.duration).sort((a,b)=>a.start-b.start||a.order-b.order).pop();
+  const activeEvent=timelineEvents.filter(e=>e.kind==='action'&&e.name===name.toUpperCase()&&e.start<=currentTime&&currentTime<e.start+e.duration).sort((a,b)=>a.start-b.start||a.order-b.order).pop();
   applyPose(rigs[name],activeEvent?activeEvent.mode:'Idle',activeEvent?(currentTime-activeEvent.start)*1000:currentTime*1000)
  });
  const camEvent=timelineEvents.filter(e=>e.kind==='camera'&&e.start<=currentTime).sort((a,b)=>a.start-b.start||a.order-b.order).pop();
