@@ -64,7 +64,7 @@ function makeRig(name,i){
  const skin=M(skinC),hair=M(hairC),shirt=M(shirtC),trim=M(trimC),pants=M(0x18243a),shoe=M(0x11141c),accent=M(accentC);
  const torsoProfile=[new THREE.Vector2(0,-.76),new THREE.Vector2(.28,-.74),new THREE.Vector2(.36,-.56),new THREE.Vector2(.46,-.20),new THREE.Vector2(.57,.34),new THREE.Vector2(.54,.59),new THREE.Vector2(.38,.76),new THREE.Vector2(0,.76)];
  const body=new THREE.Mesh(new THREE.LatheGeometry(torsoProfile,32),shirt);body.position.y=2.30;body.scale.y=.82;body.castShadow=true;g.add(body);addOutline(body,1.025);
- const neck=CAP(.12,.06,skin);neck.position.set(0,3.02,0);g.add(neck);
+ const neck=CAP(.14,.15,skin);neck.position.set(0,3.02,0);g.add(neck);
  const faceProfile=[new THREE.Vector2(0,-.64),new THREE.Vector2(.29,-.62),new THREE.Vector2(.45,-.43),new THREE.Vector2(.51,-.12),new THREE.Vector2(.52,.18),new THREE.Vector2(.43,.47),new THREE.Vector2(.29,.62),new THREE.Vector2(0,.64)];
  const head=new THREE.Mesh(new THREE.LatheGeometry(faceProfile,40),skin);head.position.y=3.78;head.castShadow=true;g.add(head);addOutline(head,1.025);
  const longHair=name==='Elise'||name==='Ella',spikyHair=name==='Jax';
@@ -94,7 +94,7 @@ function makeRig(name,i){
  chestPanel.position.set(0,2.35,.44);chestPanel.scale.y=.45;g.add(chestPanel);
  const crestShape=new THREE.Shape();crestShape.moveTo(0,.15);crestShape.lineTo(.12,.07);crestShape.lineTo(.09,-.07);crestShape.lineTo(0,-.16);crestShape.lineTo(-.09,-.07);crestShape.lineTo(-.12,.07);crestShape.closePath();
  const crest=new THREE.Mesh(new THREE.ShapeGeometry(crestShape),accent);crest.position.set(0,2.46,.475);g.add(crest);
- const headGroup=new THREE.Group();headGroup.position.y=3.65;
+ const headGroup=new THREE.Group();headGroup.position.y=3.50;
  g.children.filter(part=>part.position.y>=3.4).forEach(part=>{part.position.y-=3.8;headGroup.add(part)});
  headGroup.scale.set(.68,.60,.72);g.add(headGroup);
  g.userData={baseX:g.userData.baseX,armL:armLeft.group,armR:armRight.group,legL,legR,handL:armLeft.hand,handR:armRight.hand,mouth,head,body,phase:i*.7,mode:'Idle'};
