@@ -41,7 +41,7 @@
 <script>
 (()=>{
 const $=id=>document.getElementById(id);
-const D={Holden:[0x70462f,0x151515,0x3157c9],Jax:[0x7d4e37,0x111111,0x4067e7],Peter:[0x8b5a3c,0x171313,0x687be8],Elise:[0x6f442f,0x241513,0xd94f94],Ella:[0x805037,0x171313,0xd9a41d]};
+const D={Holden:[0x70462f,0x151515,0x1649bd,0x36a9ff,0xf5cf55],Jax:[0x7d4e37,0x111111,0x18233b,0x22d3c5,0xe74d3d],Peter:[0x8b5a3c,0x171313,0x4b62c7,0xa5b4fc,0xe9c46a],Elise:[0x6f442f,0x241513,0xa92d79,0xf178bd,0xf6d66d],Ella:[0x805037,0x171313,0x9b7411,0xf3c844,0x4e7fe8]};
 let scene,renderer,cams={},active=1,rigs={},playing=false,drag=false,lx=0,ly=0,yaw=.12,pitch=.08,dist=14,target=new THREE.Vector3(0,2.5,-5),audio,timelineEvents=[],timelineDuration=0,currentTime=0,playbackStart=0,activeCameraEvent=-1,exporting=false;
 const toonRamp=new THREE.DataTexture(new Uint8Array([86,88,102,255,116,120,136,255,151,157,174,255,190,196,211,255,225,230,241,255,255,255,255,255]),6,1,THREE.RGBAFormat);toonRamp.magFilter=THREE.NearestFilter;toonRamp.minFilter=THREE.NearestFilter;toonRamp.generateMipmaps=false;toonRamp.needsUpdate=true;
 const M=c=>new THREE.MeshToonMaterial({color:c,gradientMap:toonRamp});
@@ -60,9 +60,9 @@ function makeArm(parent,x,shirt,skin){
  parent.add(group);return{group,hand}
 }
 function makeRig(name,i){
- const [skinC,hairC,shirtC]=D[name],g=new THREE.Group();g.name=name;g.userData.baseX=(i-2)*2.55;g.position.set(g.userData.baseX,0,-5);
- const skin=M(skinC),hair=M(hairC),shirt=M(shirtC),pants=M(0x222735),shoe=M(0x11141c),accent=M(0xf2c84b);
- const torsoProfile=[new THREE.Vector2(0,-.76),new THREE.Vector2(.28,-.74),new THREE.Vector2(.36,-.56),new THREE.Vector2(.40,-.20),new THREE.Vector2(.49,.34),new THREE.Vector2(.47,.59),new THREE.Vector2(.34,.76),new THREE.Vector2(0,.76)];
+ const [skinC,hairC,shirtC,trimC,accentC]=D[name],g=new THREE.Group();g.name=name;g.userData.baseX=(i-2)*2.55;g.position.set(g.userData.baseX,0,-5);g.scale.y=1.12;
+ const skin=M(skinC),hair=M(hairC),shirt=M(shirtC),trim=M(trimC),pants=M(0x18243a),shoe=M(0x11141c),accent=M(accentC);
+ const torsoProfile=[new THREE.Vector2(0,-.76),new THREE.Vector2(.28,-.74),new THREE.Vector2(.36,-.56),new THREE.Vector2(.46,-.20),new THREE.Vector2(.57,.34),new THREE.Vector2(.54,.59),new THREE.Vector2(.38,.76),new THREE.Vector2(0,.76)];
  const body=new THREE.Mesh(new THREE.LatheGeometry(torsoProfile,32),shirt);body.position.y=2.18;body.castShadow=true;g.add(body);addOutline(body,1.025);
  const neck=CAP(.17,.22,skin);neck.position.set(0,3.02,0);g.add(neck);
  const faceProfile=[new THREE.Vector2(0,-.64),new THREE.Vector2(.29,-.62),new THREE.Vector2(.45,-.43),new THREE.Vector2(.51,-.12),new THREE.Vector2(.52,.18),new THREE.Vector2(.43,.47),new THREE.Vector2(.29,.62),new THREE.Vector2(0,.64)];
@@ -83,12 +83,20 @@ function makeRig(name,i){
  const earR=SPH(.10,skin);earR.scale.set(.52,1.1,.68);earR.position.set(.50,3.73,.01);g.add(earR);
  const nose=SPH(.055,skin);nose.scale.set(.72,1.25,.85);nose.position.set(0,3.66,.53);g.add(nose);
  const mouth=CAP(.022,.075,M(0x351d24));mouth.scale.set(1.35,.38,.38);mouth.position.set(0,3.43,.515);g.add(mouth);
- const armLeft=makeArm(g,-.48,shirt,skin),armRight=makeArm(g,.48,shirt,skin);
- const legL=limb(g,-.22,1.14,0,.155,.66,pants),legR=limb(g,.22,1.14,0,.155,.66,pants);
+ const armLeft=makeArm(g,-.56,shirt,skin),armRight=makeArm(g,.56,shirt,skin);
+ const legL=limb(g,-.22,1.18,0,.145,.78,pants),legR=limb(g,.22,1.18,0,.145,.78,pants);
  const footL=CAP(.18,.34,shoe),footR=CAP(.18,.34,shoe);footL.rotation.z=footR.rotation.z=Math.PI/2;footL.position.set(-.24,.17,.12);footR.position.set(.24,.17,.12);g.add(footL,footR);
- const belt=new THREE.Mesh(new THREE.TorusGeometry(.31,.035,8,32),M(0x171a25));belt.rotation.x=Math.PI/2;belt.position.set(0,1.75,0);g.add(belt);
+ const belt=new THREE.Mesh(new THREE.TorusGeometry(.34,.04,8,32),M(0x171a25));belt.rotation.x=Math.PI/2;belt.position.set(0,1.75,0);g.add(belt);
+ const buckle=new THREE.Mesh(new THREE.BoxGeometry(.17,.14,.07),accent);buckle.position.set(0,1.75,.32);g.add(buckle);
+ const chestPanel=new THREE.Mesh(new THREE.ShapeGeometry((()=>{const s=new THREE.Shape();s.moveTo(-.27,.55);s.lineTo(.27,.55);s.lineTo(.20,.08);s.lineTo(0,-.10);s.lineTo(-.20,.08);s.closePath();return s})()),trim);
+ chestPanel.position.set(0,2.72,.44);g.add(chestPanel);
+ const shoulderL=new THREE.Mesh(new THREE.SphereGeometry(.25,16,12),trim);shoulderL.scale.set(1.25,.72,1);shoulderL.position.set(-.53,2.87,0);g.add(shoulderL);addOutline(shoulderL,1.05);
+ const shoulderR=shoulderL.clone();shoulderR.position.x=.53;g.add(shoulderR);
  const crestShape=new THREE.Shape();crestShape.moveTo(0,.15);crestShape.lineTo(.12,.07);crestShape.lineTo(.09,-.07);crestShape.lineTo(0,-.16);crestShape.lineTo(-.09,-.07);crestShape.lineTo(-.12,.07);crestShape.closePath();
  const crest=new THREE.Mesh(new THREE.ShapeGeometry(crestShape),accent);crest.position.set(0,2.46,.475);g.add(crest);
+ const headGroup=new THREE.Group();headGroup.position.y=3.8;
+ g.children.filter(part=>part.position.y>=3.4).forEach(part=>{part.position.y-=3.8;headGroup.add(part)});
+ headGroup.scale.set(.80,.80,.88);g.add(headGroup);
  g.userData={baseX:g.userData.baseX,armL:armLeft.group,armR:armRight.group,legL,legR,handL:armLeft.hand,handR:armRight.hand,mouth,head,body,phase:i*.7,mode:'Idle'};
  scene.add(g);rigs[name]=g
 }
@@ -225,3 +233,4 @@ window.tone=t=>{audio&&audio.close();audio=new(window.AudioContext||window.webki
 })();
 </script><script src="animation-references.js"></script>
 </body></html>
+
