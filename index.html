@@ -41,7 +41,7 @@
 <script>
 (()=>{
 const $=id=>document.getElementById(id);
-const D={Holden:[0x70462f,0x151515,0x1649bd,0x36a9ff,0xf5cf55],Jax:[0x7d4e37,0x111111,0x18233b,0x22d3c5,0xe74d3d],Peter:[0x8b5a3c,0x171313,0x4b62c7,0xa5b4fc,0xe9c46a],Elise:[0x6f442f,0x241513,0xa92d79,0xf178bd,0xf6d66d],Ella:[0x805037,0x171313,0x9b7411,0xf3c844,0x4e7fe8]};
+const D={Holden:[0x70462f,0x171820,0x1649bd,0x36a9ff,0xf5cf55],Jax:[0x7d4e37,0x101722,0x18233b,0x22d3c5,0xe74d3d],Peter:[0x8b5a3c,0x3b241c,0x4b62c7,0xa5b4fc,0xe9c46a],Elise:[0x6f442f,0x321627,0xa92d79,0xf178bd,0xf6d66d],Ella:[0x805037,0x704220,0x9b7411,0xf3c844,0x4e7fe8]};
 let scene,renderer,cams={},active=1,rigs={},playing=false,drag=false,lx=0,ly=0,yaw=.12,pitch=.08,dist=14,target=new THREE.Vector3(0,2.5,-5),audio,timelineEvents=[],timelineDuration=0,currentTime=0,playbackStart=0,activeCameraEvent=-1,exporting=false;
 const toonRamp=new THREE.DataTexture(new Uint8Array([86,88,102,255,116,120,136,255,151,157,174,255,190,196,211,255,225,230,241,255,255,255,255,255]),6,1,THREE.RGBAFormat);toonRamp.magFilter=THREE.NearestFilter;toonRamp.minFilter=THREE.NearestFilter;toonRamp.generateMipmaps=false;toonRamp.needsUpdate=true;
 const M=c=>new THREE.MeshToonMaterial({color:c,gradientMap:toonRamp});
@@ -67,9 +67,11 @@ function makeRig(name,i){
  const neck=CAP(.17,.22,skin);neck.position.set(0,3.02,0);g.add(neck);
  const faceProfile=[new THREE.Vector2(0,-.64),new THREE.Vector2(.29,-.62),new THREE.Vector2(.45,-.43),new THREE.Vector2(.51,-.12),new THREE.Vector2(.52,.18),new THREE.Vector2(.43,.47),new THREE.Vector2(.29,.62),new THREE.Vector2(0,.64)];
  const head=new THREE.Mesh(new THREE.LatheGeometry(faceProfile,40),skin);head.position.y=3.78;head.castShadow=true;g.add(head);addOutline(head,1.025);
- const hairCap=new THREE.Mesh(new THREE.SphereGeometry(.57,36,24,0,Math.PI*2,0,Math.PI*.57),hair);hairCap.scale.set(1.03,.78,.95);hairCap.position.set(0,4.18,-.015);hairCap.castShadow=true;g.add(hairCap);addOutline(hairCap,1.025);
- const lockL=SPH(.16,hair);lockL.scale.set(.78,1.35,.8);lockL.position.set(-.43,3.94,.02);g.add(lockL);
- const lockR=SPH(.16,hair);lockR.scale.set(.78,1.35,.8);lockR.position.set(.43,3.94,.02);g.add(lockR);
+ const longHair=name==='Elise'||name==='Ella',spikyHair=name==='Jax';
+ const hairCap=new THREE.Mesh(new THREE.SphereGeometry(.57,36,24,0,Math.PI*2,0,Math.PI*.57),hair);hairCap.scale.set(1.03,spikyHair?.66:.78,.95);hairCap.position.set(0,4.18,-.015);hairCap.castShadow=true;g.add(hairCap);addOutline(hairCap,1.025);
+ const lockL=SPH(.16,hair);lockL.scale.set(.78,longHair?2.35:1.35,.8);lockL.position.set(-.43,longHair?3.77:3.94,.02);g.add(lockL);
+ const lockR=SPH(.16,hair);lockR.scale.set(.78,longHair?2.35:1.35,.8);lockR.position.set(.43,longHair?3.77:3.94,.02);g.add(lockR);
+ if(spikyHair){for(let n=0;n<4;n++){const spike=new THREE.Mesh(new THREE.ConeGeometry(.13,.34,5),hair);spike.position.set(-.30+n*.20,4.54,.02);spike.rotation.z=(n-1.5)*-.22;g.add(spike)}}
  const fringeShape=new THREE.Shape();fringeShape.moveTo(-.50,.01);fringeShape.lineTo(-.36,.12);fringeShape.lineTo(-.18,-.015);fringeShape.lineTo(-.01,.10);fringeShape.lineTo(.16,-.02);fringeShape.lineTo(.34,.11);fringeShape.lineTo(.51,.025);fringeShape.lineTo(.51,-.09);fringeShape.lineTo(-.50,-.09);fringeShape.closePath();
  const fringe=new THREE.Mesh(new THREE.ShapeGeometry(fringeShape),hair);fringe.position.set(0,4.045,.48);g.add(fringe);
  for(const x of[-.20,.20]){
@@ -89,7 +91,7 @@ function makeRig(name,i){
  const belt=new THREE.Mesh(new THREE.TorusGeometry(.34,.04,8,32),M(0x171a25));belt.rotation.x=Math.PI/2;belt.position.set(0,1.75,0);g.add(belt);
  const buckle=new THREE.Mesh(new THREE.BoxGeometry(.17,.14,.07),accent);buckle.position.set(0,1.75,.32);g.add(buckle);
  const chestPanel=new THREE.Mesh(new THREE.ShapeGeometry((()=>{const s=new THREE.Shape();s.moveTo(-.27,.55);s.lineTo(.27,.55);s.lineTo(.20,.08);s.lineTo(0,-.10);s.lineTo(-.20,.08);s.closePath();return s})()),trim);
- chestPanel.position.set(0,2.72,.44);g.add(chestPanel);
+ chestPanel.position.set(0,2.55,.44);chestPanel.scale.y=.60;g.add(chestPanel);
  const crestShape=new THREE.Shape();crestShape.moveTo(0,.15);crestShape.lineTo(.12,.07);crestShape.lineTo(.09,-.07);crestShape.lineTo(0,-.16);crestShape.lineTo(-.09,-.07);crestShape.lineTo(-.12,.07);crestShape.closePath();
  const crest=new THREE.Mesh(new THREE.ShapeGeometry(crestShape),accent);crest.position.set(0,2.46,.475);g.add(crest);
  const headGroup=new THREE.Group();headGroup.position.y=3.8;
